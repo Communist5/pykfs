@@ -56,6 +56,7 @@ class GitHook(object):
     def _read_settings(self):
         self.unread_settings = self.settings.copy()
         self.actions = {}
+        self.stdin = self.unread_settings.pop('stdin', None)
         for action in self.actions_available:
             self.actions[action] = self.unread_settings.pop(action, None)
         for invalid in self.unread_settings:
@@ -90,7 +91,8 @@ class PostReceive(GitHook):
     actions_available = ['irc', 'backup']
 
     def _parse_input(self):
-        self.stdin = sys.stdin.read()
+        if not self.stdin:
+            self.stdin = sys.stdin.read()
         self.oldhead, self.newhead, self.ref = self.stdin.split()
         self.branch_changed = self.ref.split('/')[-1]
 
