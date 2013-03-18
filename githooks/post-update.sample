@@ -1,0 +1,14 @@
+# Run after any update to this repo
+
+
+from pykfs.githooks import post_update
+
+
+SETTINGS = {
+           # 'backup': {'directory': '<backup-directory>'}
+           # 'irc': {'server': '<servename>',
+           #         'port': 6667}
+}
+
+
+post_update(settings=SETTINGS)
