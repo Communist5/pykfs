@@ -80,7 +80,7 @@ class GitHook(object):
     def _do_actions(self):
         for action, options in self.actions.items():
             if options:
-                self.logger.info("Performing '{}' action ...")
+                self.logger.info("Performing '{}' action ...".format(action))
                 getattr(self, action)(**options)
 
 
@@ -107,6 +107,8 @@ class PostReceive(GitHook):
         for name in 'ircname', 'nickname', 'username':
             kwargs.setdefault(name, 'git')
         kwargs.setdefault('port', 6667)
+        self.logger.debug("Connection Info:")
+        self.logger.debug(kwargs)
         connection = server.connect(**kwargs)
         connection.join(channel)
         details = {'user': self.user,
