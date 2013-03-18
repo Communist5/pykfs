@@ -90,7 +90,7 @@ class PostReceive(GitHook):
     actions_available = ['irc', 'backup']
 
     def _parse_input(self):
-        self.stdin = 'foo 62c3c4b oof' #sys.stdin.read()
+        self.stdin = sys.stdin.read()
         self.oldhead, self.newhead, self.ref = self.stdin.split()
         self.branch_changed = self.ref.split('/')[-1]
 
