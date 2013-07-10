@@ -1,13 +1,16 @@
 from unittest2 import TestCase
-from pykfs.githooks.hookobj import GitHook
+from pykfs.git.hook.hookobj import GitHook
+from pykfs.git.hook import hookobj
 from mock import Mock, patch
 import logging
+
+_LOGGING_DEFAULT = hookobj._LOGGING_DEFAULT
+_LOGGING_DEFAULT["level"] = logging.DEBUG
 
 
 class GitHookDummy(GitHook):
     hookname = "dummy"
-    logger = logging.getLogger("dummyhookobj")
-    actions = ["dummy_action_1", "dummy_action_2"]
+    actions_available = ["dummy_action_1", "dummy_action_2"]
 
     def __init__(self, *args, **kwargs):
         self._setup_logging = Mock()
@@ -15,24 +18,33 @@ class GitHookDummy(GitHook):
         self.dummy_action_1 = Mock()
         self.dummy_action_2 = Mock()
         self._get_repo_info = Mock()
+        self.logger = logging.getLogger("dummyhookobj")
+        self.reponame = "foo"
 
+    def _parse_input(self):
+        pass
+
+    def _get_repo_info(self):
+        self.reponame = 'foo'
 
 class TestGitHook(TestCase):
 
-    def test_catches_exception(self):
-        obj = GitHookDummy(Mock())
-        for func in '_initialize', '_do_actions':
-            with patch.object(obj, func) as mockfunc:
-                mockfunc.side_effect=Exception
-                obj()
+    @classmethod
+    def setup_class(cls):
+        logging.basicConfig(**_LOGGING_DEFAULT)
 
     def test_invalid_setting(self):
-        settings = {'dummy_action_1': True, 'dummy_action_3': True}
+        settings = {'dummy_action_1': {},
+                    'dummy_action_3': {},
+                    'stdin': "",
+                    'print_stderr': False}
         obj = GitHookDummy(settings=settings)
         self.assertRaisesRegexp(TypeError, "invalid settings", obj._initialize)
 
     def test_run_action(self):
-        settings = {'dummy_action_1': True}
+        settings = {'dummy_action_1': {"foo": "bar"},
+                    'stdin': "",
+                    'print_stderr': False}
         obj = GitHookDummy(settings=settings)
         obj()
         self.assertEqual(obj.dummy_action_1.call_count, 1)

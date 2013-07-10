@@ -3,25 +3,28 @@ import os
 import sys
 import getpass
 import irc.client
-from pykfs import gitlib
+import pykfs.git.lib as gitlib
 
 
-_LOGGING_DEFAULT={"level": logging.INFO,
-                  "format": '- %(asctime)s - %(levelname)s - %(message)s',
-                  "datefmt": '%Y-%m-%d %H:%M:%S',
-                  "filemode": 'w'}
+_LOGGING_DEFAULT = {
+    "level": logging.INFO,
+    "format": '- %(asctime)s - %(levelname)s - %(message)s',
+    "datefmt": '%Y-%m-%d %H:%M:%S',
+    "filemode": 'w'
+}
 
 
 class GitHook(object):
 
     def __init__(self, settings):
+        self.print_stderr = False
         self.settings = settings
         self._unread_settings = self.settings.copy()
         self._setup_logging()
 
     def _setup_logging(self):
         self.log_settings = _LOGGING_DEFAULT.copy()
-        self.log_settings.update(self.settings.pop("logging", {}))
+        self.log_settings.update(self._unread_settings.pop("logging", {}))
         if 'filename' not in self.log_settings:
             raise TypeError("pykfs githooks require a logging filename")
         logging.basicConfig(**self.log_settings)
@@ -40,10 +43,9 @@ class GitHook(object):
                        "'{repopath}'.".format(name=self.hookname, repopath=
                        reporoot))
             self.logger.error(message)
-            sys.stderr.write("{}\n".format(message))
-            self.logger.exception(e)
-            self.logger.error("Abandoning hook ...")
-            return 1
+            if self.print_stderr:
+                sys.stderr.write("{}\n".format(message))
+            raise
 
     def _initialize(self):
         for func, message in [
@@ -54,12 +56,14 @@ class GitHook(object):
                 func()
 
     def _read_settings(self):
-        self.unread_settings = self.settings.copy()
         self.actions = {}
-        self.stdin = self.unread_settings.pop('stdin', None)
+        self.stdin = self._unread_settings.pop('stdin', None)
+        self.print_stderr = self._unread_settings.pop('print_stderr', True)
+        if self.stdin is None:
+            self.stdin = sys.stdin.read()
         for action in self.actions_available:
-            self.actions[action] = self.unread_settings.pop(action, None)
-        for invalid in self.unread_settings:
+            self.actions[action] = self._unread_settings.pop(action, None)
+        for invalid in self._unread_settings:
             raise TypeError("{hookname} got invalid settings element "
                             "'{invalid}'".format(hookname=self.hookname,
                             invalid=invalid))
@@ -79,6 +83,7 @@ class GitHook(object):
         raise NotImplementedError()
 
     def _do_actions(self):
+        print self.actions
         for action, options in self.actions.items():
             if options:
                 self.logger.info("Performing '{}' action ...".format(action))
@@ -91,8 +96,6 @@ class PostReceive(GitHook):
     actions_available = ['irc', 'backup']
 
     def _parse_input(self):
-        if not self.stdin:
-            self.stdin = sys.stdin.read()
         self.oldhead, self.newhead, self.ref = self.stdin.split()
         self.branch_changed = self.ref.split('/')[-1]
 

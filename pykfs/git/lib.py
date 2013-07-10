@@ -16,3 +16,7 @@ def commit_message(sha, cwd=None, short=False):
     if short:
         return lines[index + 1]
     return "\n".join(lines[index + 1:-1])
+
+
+def gettag(sha, cwd=None):
+    pass

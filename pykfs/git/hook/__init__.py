@@ -1,4 +1,4 @@
-from pykfs.githooks.hookobj import PostReceive
+from pykfs.git.hook.hookobj import PostReceive
 import logging
 
 
