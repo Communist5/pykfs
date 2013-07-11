@@ -4,6 +4,7 @@ import sys
 import getpass
 import irc.client
 import pykfs.git.lib as gitlib
+import pykfs.git.note as gitnote
 
 
 _LOGGING_DEFAULT = {
@@ -25,8 +26,6 @@ class GitHook(object):
     def _setup_logging(self):
         self.log_settings = _LOGGING_DEFAULT.copy()
         self.log_settings.update(self._unread_settings.pop("logging", {}))
-        if 'filename' not in self.log_settings:
-            raise TypeError("pykfs githooks require a logging filename")
         logging.basicConfig(**self.log_settings)
         self.logger = logging.getLogger(self.logger_name)
 
@@ -83,7 +82,6 @@ class GitHook(object):
         raise NotImplementedError()
 
     def _do_actions(self):
-        print self.actions
         for action, options in self.actions.items():
             if options:
                 self.logger.info("Performing '{}' action ...".format(action))
@@ -93,7 +91,7 @@ class GitHook(object):
 class PostReceive(GitHook):
     logger_name = 'postreceive'
     hookname = 'post-receive'
-    actions_available = ['irc', 'backup']
+    actions_available = ['irc']
 
     def _parse_input(self):
         self.oldhead, self.newhead, self.ref = self.stdin.split()
@@ -102,7 +100,7 @@ class PostReceive(GitHook):
     def _get_repo_info(self):
         GitHook._get_repo_info(self)
         self.commit_message = gitlib.commit_message(self.newhead,
-                                                    cwd=self.reporoot)
+                                                    gitdir=self.dotgitdir)
         self.short_commit_message = self.commit_message.split('\n')[0]
 
     def irc(self, **kwargs):
@@ -129,3 +127,48 @@ class PostReceive(GitHook):
             self.logger.info('IRC: {}'.format(line))
         connection.close()
 
+
+class PreReceive(GitHook):
+    logger_name = 'prereceive'
+    hookname = 'pre-receive'
+    actions_available = ['validate_notes']
+
+    def _parse_input(self):
+        self.oldhead, self.newhead, self.ref = self.stdin.split()
+        self.branch_changed = self.ref.split('/')[-1]
+
+    def _get_repo_info(self):
+        GitHook._get_repo_info(self)
+        self.commit_message = gitlib.commit_message(self.newhead,
+                                                    gitdir=self.dotgitdir)
+        self.short_commit_message = self.commit_message.split('\n')[0]
+
+    def validate_notes(self, valid_labels=None):
+        validate_notes(self.commit_message, valid_labels)
+
+
+class CommitMsg(GitHook):
+    logger_name = 'commitmsg'
+    hookname = 'commit-msg'
+    actions_available = ['validate_notes']
+
+    def _parse_input(self):
+        self.message = ""
+        with open(sys.argv[1]) as f:
+            line = f.readline().strip()
+            if line and line[0] != '#':
+                self.message += line
+        self.logger.debug("Read in message: '{0}'".format(self.message))
+
+    def validate_notes(self, valid_labels=None):
+        validate_notes(self.message, valid_labels)
+
+
+def validate_notes(message, valid_labels=None):
+    notes = gitnote.get_notes_from_message(message)
+    if valid_labels:
+        for label in notes:
+            if label not in valid_labels:
+                raise gitnote.GitNoteException(
+                    "Git note label '{0}' not recognized for this repository".format(label)
+                )

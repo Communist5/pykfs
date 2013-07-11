@@ -3,8 +3,9 @@
 from distutils.core import setup
 
 setup(
+    install_requires=['irc', 'sh'],
     name='pykfs',
-    version='0.1.0',
+    version='0.1.1',
     description="Kevin Steffler's python library",
     author='Kevin Steffler',
     author_email='kevin5steffler@gmail.com',

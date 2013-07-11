@@ -4,9 +4,6 @@ from pykfs.git.hook import hookobj
 from mock import Mock, patch
 import logging
 
-_LOGGING_DEFAULT = hookobj._LOGGING_DEFAULT
-_LOGGING_DEFAULT["level"] = logging.DEBUG
-
 
 class GitHookDummy(GitHook):
     hookname = "dummy"
@@ -28,10 +25,6 @@ class GitHookDummy(GitHook):
         self.reponame = 'foo'
 
 class TestGitHook(TestCase):
-
-    @classmethod
-    def setup_class(cls):
-        logging.basicConfig(**_LOGGING_DEFAULT)
 
     def test_invalid_setting(self):
         settings = {'dummy_action_1': {},
