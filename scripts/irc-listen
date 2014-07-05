@@ -1,0 +1,140 @@
+#! /usr/bin/env python
+"""
+Runs an IRC bot that logs all traphic on a given server and channel
+"""
+
+
+import sys
+import irc.bot
+import irc.strings
+from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
+import os
+from optparse import Option, OptionParser
+import datetime as dt
+import daemon
+import signal
+from django.conf import settings
+
+
+
+OPTIONS = {
+    'server': {"short":'-s', "help": "The server to listen to", "metavar": 'SERVER',
+               "position": 0, "default": settings.CHAT_SERVER},
+    'port': {"short": '-p', "type": int, "help": "The port to connect to",
+             "metavar": 'PORT', "default": 6667},
+    'nickname': {"short": '-n', "help": "The nickname to use", "metavar": 'NICK',
+                 "default":'devweb'},
+    'logdir': {"short": '-l', "help": "The directory to log the chat to",
+                "metavar": 'LOGDIR', "default": settings.CHATLOG_DIRECTORY},
+    'channel': {"short": '-c', "help": "The channel to listen on",
+                "metavar": 'CHANNEL', "position": 1, "default":
+                settings.CHAT_CHANNEL},
+    'max_nick': {"short": '-m', "help": "The expected maximum length of the "
+                 "nicknames of peers.", "metavar": 'MAX_NICK', "default": 16},
+    'daemonize': {"short": '-d', "help": "Run as daemon, terminate with SIGHUP",
+                  "metavar": 'DAEMONIZE', "default": False,
+                  "action":"store_true"}}
+
+
+class CommandException(Exception):
+    """ An exception indicating that the command failed due to a usage error """
+
+
+class TestBot(irc.bot.SingleServerIRCBot):
+    def __init__(self, **kwargs):
+        for option, details in OPTIONS.items():
+            try:
+                setattr(self, option, kwargs.pop(option, None) or details['default'])
+            except KeyError:
+                raise TypeError("Missing value for required keyword argument "
+                                "'{0}'".format(option))
+        for kwarg in kwargs:
+            raise TypeError("__init__ got unexpected keyword argument {0}"
+                            .format(kwarg))
+        irc.bot.SingleServerIRCBot.__init__(self, [(self.server, self.port)],
+                                            self.nickname, self.nickname)
+
+    def on_nicknameinuse(self, c, e):
+        c.nick(c.get_nickname() + "_")
+
+    def on_welcome(self, c, e):
+        c.join(self.channel)
+
+    def on_pubmsg(self, c, e):
+        sender = e.source.split('!')[0]
+        message = e.arguments[0]
+        tolog = "{:>{fill}}: {}\n".format(sender, message, fill=self.max_nick)
+        print tolog,
+        with open(self.get_logfile(), 'a') as f:
+            f.write(tolog)
+
+    def get_logfile(self):
+        now = dt.datetime.now()
+        offset = now - settings.DAY_CHANGE_OFFSET
+        datestr = offset.strftime(settings.DATE_FORMAT)
+        logfile = settings.CHATLOG_FORMAT.format(server=self.server,
+                                                 channel=self.channel,
+                                                 date=datestr)
+        return os.path.join(self.logdir, logfile)
+
+
+def _make_parsable_option(name, option_dict):
+    kwargs = option_dict.copy()
+    kwargs.pop('position', None)
+    args = (kwargs.pop('short'), "--{0}".format(name))
+    return Option(*args, **kwargs)
+
+
+def get_parser():
+    usage = "%proj <SERVER> <CHANNEL> [OPTIONS] ..."
+    description = __doc__.strip()
+    parser = OptionParser(usage=usage, description=description)
+    for name, details in OPTIONS.items():
+        parser.add_option(_make_parsable_option(name, details))
+    return parser
+
+
+def get_config(options, args):
+    config = {}
+    argpos = 0
+    opt_tuples = [(t[1].get('position', None), t[0]) for t in OPTIONS.items()]
+    positionals = [t for t in opt_tuples if t[0] is not None]
+    nonpositionals = [t[1] for t in opt_tuples if t[0] is None]
+    positionals.sort()
+    for _, arg in positionals:
+        if getattr(options, arg) is not None:
+            config[arg] = getattr(options, arg)
+        else:
+            if argpos >= len(args):
+                raise CommandException("Missing value for required option "
+                                       "'{0}'".format(arg))
+            config[arg] = args[argpos]
+            argpos += 1
+    if argpos != len(args):
+        raise CommandException("Command received too many positional args")
+    for arg in nonpositionals:
+        config[arg] = getattr(options, arg)
+    return config
+
+
+def start(config, daemonize=False):
+    if daemonize:
+        context = daemon.DaemonContext()
+        context.signal_map = {signal.SIGHUP: 'terminate'}
+        with context:
+            start(config, daemonize=False)
+    bot = TestBot(**config)
+    bot.start()
+
+
+def main():
+    parser = get_parser()
+    try:
+        config = get_config(*parser.parse_args())
+        start(config, config.pop('daemonize', False))
+    except CommandException as e:
+        parser.error(e.message)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

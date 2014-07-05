@@ -1,7 +1,6 @@
 from unittest2 import TestCase
 from pykfs.git.hook.hookobj import GitHook
-from pykfs.git.hook import hookobj
-from mock import Mock, patch
+from mock import Mock
 import logging
 
 
@@ -23,6 +22,7 @@ class GitHookDummy(GitHook):
 
     def _get_repo_info(self):
         self.reponame = 'foo'
+
 
 class TestGitHook(TestCase):
 

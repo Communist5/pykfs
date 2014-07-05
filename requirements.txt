@@ -1,0 +1,4 @@
+irc
+sh
+Pillow
+numpy
