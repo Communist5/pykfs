@@ -15,14 +15,14 @@ dist: setup.py $(PYTHON_FILES) requirements.txt README MANIFEST.in MAKEFILE
 
 .PHONY: sampleEnv
 sampleEnv: $(SAMPLE_ENV)
-$(SAMPLE_ENV): dist
+$(SAMPLE_ENV): dist ignore
 	rm -f -r $(SAMPLE_ENV)
 	virtualenv $(SAMPLE_ENV) --no-site-packages
 	$(SAMPLE_ENV_PIP) install dist/pykfs*
 
 .PHONY: testEnv
-testEnv: $(TEST_ENV)
-$(TEST_ENV): requirements.txt MAKEFILE
+testEnv: $(TEST_ENV) 
+$(TEST_ENV): requirements.txt MAKEFILE ignore
 	rm -f -r $(TEST_ENV)
 	virtualenv $(TEST_ENV) --no-site-packages
 	$(TEST_ENV_PIP) install -r requirements.txt
@@ -42,3 +42,10 @@ pyshell: $(SAMPLE_ENV)
 .PHONY: test
 test: $(TEST_ENV)
 	$(TEST_ENV_NOSE)
+
+.PHONY: debug
+debug: $(TEST_ENV)
+	$(TEST_ENV_NOSE) -s
+
+ignore:
+	mkdir ignore

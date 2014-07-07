@@ -7,13 +7,11 @@ Runs an IRC bot that logs all traphic on a given server and channel
 import sys
 import irc.bot
 import irc.strings
-from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
 import os
 from optparse import Option, OptionParser
 import datetime as dt
 import daemon
 import signal
-from django.conf import settings
 
 
 
