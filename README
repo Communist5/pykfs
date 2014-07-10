@@ -1,0 +1,36 @@
+Personal Python distribution for Kevin Steffler
+
+https://github.com/drekels/pykfs
+
+This repo contains personal python packages and scripts for Kevin Steffler and is not 
+intended for general use.  If you see something in here you like, let me know and
+I will make a seperate package.
+
+Features:
+* Image manipulation through pykfs.image_filter
+* Convenience scripts for git, searching for strings and viewing json
+* Framework for git hooks wirtten in python
+
+
+Dependencies
+------------
+
+See requirements.txt
+
+
+Usage
+-----
+
+pip install --upgrade git+https://github.com/drekels/pykfs.git@STABLE
+
+
+Known Issues
+------------
+
+No known issues (mostly due to ignorance)
+
+
+Thanks
+------
+
+To me!!!!
