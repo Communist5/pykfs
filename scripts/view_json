@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+from pykfs.script import Script
+import subprocess
+import json
+
+class ViewJson(Script):
+    """
+    Opens a json file and previews it in a human readable way.
+    """
+
+    args = [
+        {
+            "name": "filepath", "type": str, "action": "store", "metavar": "FILEPATH",
+            "help": "The json file to open",
+        },
+    ]
+
+
+    def do_script(self):
+        with open(self.filepath) as f:
+            obj = json.load(f)
+            s = json.dumps(obj, indent=4)
+        process = subprocess.Popen("less", stdin=subprocess.PIPE)
+        process.communicate(s);
+
+
+if __name__ == "__main__":
+    ViewJson.execute()

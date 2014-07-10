@@ -5,13 +5,13 @@ import subprocess
 
 class Grebase(Script):
     """
-    Rebases a set of git commits.
+    Searches for a pattern in all child files
     """
 
     args = [
         {
-            "name": "steps", "type": int, "action": "store", "metavar": "N",
-            "help": "The number of commits to rebase",
+            "name": "pattern", "type": str, "action": "store", "metavar": "PATTERN",
+            "help": "The pattern to search for",
         },
         {
             "option_strings": ["-d", "--dryrun"], "name": "dryrun", "const": True,
@@ -21,12 +21,13 @@ class Grebase(Script):
     ]
 
     def do_script(self):
-        command = "git rebase -i {}".format(self.steps)
+        command = "grep -n -H -r '{}' *".format(self.pattern)
         if self.dryrun:
             print "Command to be run:"
             print "    {}".format(command)
         else:
-            subprocess.check_call(command, shell = True)
+            grep = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+            subprocess.check_call("less", stdin=grep.stdout, shell=True)
 
 
 if __name__ == "__main__":
