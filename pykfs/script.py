@@ -12,7 +12,7 @@ class Script(object):
 
     @classmethod
     def execute(cls, settings=None):
-        tokens = sys.argv[:1]
+        tokens = sys.argv[1:]
         script = cls()
         sys.exit(script.run(tokens, settings=settings))
 
@@ -49,7 +49,7 @@ class Script(object):
         self.options = self.parser.parse_args(self.tokens)
         self._determine_arg_values()
 
-    def _add_arg(self, name, option_strings, default=None, **kwargs):
+    def _add_arg(self, name, option_strings=[], default=None, **kwargs):
         kwargs["dest"] = name
         kwargs["default"] = None
         self.script_defaults[name] = default

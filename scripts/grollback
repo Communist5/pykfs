@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from pykfs.script import Script
+import subprocess
 
 class Grollback(Script):
     """
@@ -10,21 +11,18 @@ class Grollback(Script):
 
     args = [
         {
-            "option_strings": ["-s", "--steps"], "name": "steps", "type": int, "action": "store",
+            "name": "steps", "type": int, "action": "store", "metavar": "N",
             "help": "The number of commits to roll back",
         },
         {
-            "options_strings": ["-d", "--dryrun"], "name": "dryrun", "const": "true",
-            "action": "store", "default": False, "help": "Print the command to be run, but do not "
-            "execute"
+            "option_strings": ["-d", "--dryrun"], "name": "dryrun", "const": True,
+            "action": "store_const", "default": False, 
+            "help": "Print the command to be run, but do not execute."
         }
     ]
 
     def do_script(self):
-        count = 1
-        if args:
-            count = args[0]
-        command = "git reset --hard HEAD~{}".format(count)
+        command = "git reset --hard HEAD~{}".format(self.steps)
         if self.dryrun:
             print "Command to be run:"
             print "    {}".format(command)
