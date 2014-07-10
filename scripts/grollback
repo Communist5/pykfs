@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+from pykfs.script import Script
+
+class Grollback(Script):
+    """
+    Rolls back git commits.  This process is destructive, only use if you are okay losing
+    the commits in question.
+    """
+
+    args = [
+        {
+            "option_strings": ["-s", "--steps"], "name": "steps", "type": int, "action": "store",
+            "help": "The number of commits to roll back",
+        },
+        {
+            "options_strings": ["-d", "--dryrun"], "name": "dryrun", "const": "true",
+            "action": "store", "default": False, "help": "Print the command to be run, but do not "
+            "execute"
+        }
+    ]
+
+    def do_script(self):
+        count = 1
+        if args:
+            count = args[0]
+        command = "git reset --hard HEAD~{}".format(count)
+        if self.dryrun:
+            print "Command to be run:"
+            print "    {}".format(command)
+        else:
+            subprocess.check_call(command, shell = True)
+
+
+if __name__ == "__main__":
+    Grollback.execute()

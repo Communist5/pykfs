@@ -11,21 +11,20 @@ class ErrorEncountered(Exception):
 
 class SampleScript(script.Script):
     """ A sample script for testing """
-    args = {
-        "arg1": {
-            "option_strings": ['-a', '-arg1'], "const": True, "action": "store_const",
-            "default": "foobar"
+    args = [
+        {
+            "name": "arg1", "option_strings": ['-a', '-arg1'], "const": True,
+            "action": "store_const", "default": "foobar"
         },
-        "arg2": {
-            "option_strings": ['-b', '-arg2'], "const": True, "action": "store_const",
-            "default": None
+        {
+            "name": "arg2", "option_strings": ['-b', '-arg2'], "const": True,
+            "action": "store_const", "default": None
         },
-        "arg3": {
-            "option_strings": ['-c', '-arg3'], "action": "store", "default": "barbar"
+        {
+            "name": "arg3", "option_strings": ['-c', '-arg3'], "action": "store",
+            "default": "barbar"
         }
-
-
-    }
+    ]
     conflicts = [
         ("arg1", "arg2")
     ]

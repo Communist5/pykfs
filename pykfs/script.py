@@ -1,5 +1,4 @@
 import sys
-import traceback
 import argparse
 from pykfs.settings import get_script_settings
 
@@ -8,7 +7,7 @@ class Script(object):
     """ Base for runnable commad line scripts """
 
     name = ""
-    args = {}
+    args = []
     conflicts = []
 
     @classmethod
@@ -29,7 +28,7 @@ class Script(object):
         if not settings:
             self.settings = get_script_settings(self.name)
         for x in self.settings:
-            if x not in self.args:
+            if x not in [arg["name"] for arg in self.args]:
                 self._print_warning("Unknown setting '{0}'.\n".format(x))
 
     def _print_warning(self, warning):
@@ -45,8 +44,8 @@ class Script(object):
     def _parse_args(self):
         self.script_defaults = {}
         self.parser = argparse.ArgumentParser(description=type(self).__doc__.strip())
-        for key, value in self.args.items():
-            self._add_arg(key, **value)
+        for arg in self.args:
+            self._add_arg(**arg)
         self.options = self.parser.parse_args(self.tokens)
         self._determine_arg_values()
 
@@ -62,17 +61,18 @@ class Script(object):
         for conflict in self.conflicts:
             self._check_conflicting(*conflict)
         for arg in self.args:
+            argname = arg["name"]
             value = None
-            if hasattr(self.options, arg):
-                value = getattr(self.options, arg)
+            if hasattr(self.options, argname):
+                value = getattr(self.options, argname)
             if value is None:
-                if arg in self.settings:
-                    value = self.settings[arg]
+                if argname in self.settings:
+                    value = self.settings[argname]
                 else:
-                    value = self.script_defaults[arg]
-            if hasattr(self, arg):
-                raise KeyError("Conflicting variable name '{}' on script".format(arg))
-            setattr(self, arg, value)
+                    value = self.script_defaults[argname]
+            if hasattr(self, argname):
+                raise KeyError("Conflicting variable name '{}' on script".format(argname))
+            setattr(self, argname, value)
 
 
     def _check_conflicting(self, option1, option2):
