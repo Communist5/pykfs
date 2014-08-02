@@ -22,6 +22,6 @@ setup(
     author_email='kevin5steffler@gmail.com',
     url='foobar',
     packages=['pykfs', 'pykfs.git', 'pykfs.git.hook'],
-    scripts=['scripts/grollback'],
+    scripts=['scripts/grollback', 'scripts/grebase', 'scripts/view_json', 'scripts/gref'],
     install_requires=required,
 )

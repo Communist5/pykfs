@@ -1,5 +1,3 @@
 irc
 sh
-Pillow
-numpy
 daemon
