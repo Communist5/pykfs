@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+# vim: set syntax=python
+
+
+import shutil
+import os
+import sys
+import datetime as dt
+from mako.template import Template
+import tarfile
+from pykfs.git.lib import init as gitinit
+from pykfs.git.lib import setorigin, setupstream, addall, commit
+from pykfs.script import Script, email, url
+
+
+import mako.runtime
+mako.runtime.UNDEFINED = "UNDEFINED VALUE"
+
+
+class NewPyDist(Script):
+    """
+    Creates a new python distribution, including setup.py, README,
+    LICENSE (MIT License), MANIFEST.in, Makefile, and test package.
+    """
+
+    args = [
+        {
+            "name": "module_name",
+            "metavar": "MODULENAME",
+            "action": "store",
+            "type": str,
+            "help": "The name of the top level package or the module name of this distribution."
+        },
+        {
+            "name": "author_name",
+            "option_strings": ["-n", "--author-name"],
+            "nargs": '+',
+            "metavar": "AUTHOR",
+            "type": str,
+            "default": None,
+            "help": "The author's name",
+        },
+        {
+            "name": "author_email",
+            "option_strings": ["-e", "--author-email"],
+            "metavar": "EMAIL",
+            "action": "store",
+            "type": email,
+            "default": None,
+            "help": "The author's email",
+        },
+        {
+            "name": "github_url",
+            "option_strings": ["--github"],
+            "metavar": "GITHUB",
+            "action": "store",
+            "type": url,
+            "default": None,
+            "help":
+                "The url for the github repository to track.  This sets the web page and the "
+                "origin url for the repository.",
+        },
+        {
+            "name": "web_page",
+            "option_strings": ["-w", "--web-page"],
+            "metavar": "WEBPAGE",
+            "action": "store",
+            "type": url,
+            "default": None,
+            "help": "The url of the distributions web site.",
+        },
+        {
+            "name": "directory",
+            "option_strings": ["-d", "--directory"],
+            "type": str,
+            "action": "store",
+            "metavar": "DIRECTORY",
+            "default": None,
+            "help":
+                "The directory to create the new distribution in. This defaults to the "
+                "current working directory with directory name being the same a MODULENAME",
+        },
+        {
+            "name": "origin_url",
+            "option_strings": ["--origin"],
+            "type": str,
+            "action": "store",
+            "metavar": "URL",
+            "default": None,
+            "help":
+                "The remote url to set as origin/master. "
+                "If this is set, will automatically set the new git repo's master branch to track the "
+                "master branch of the remote repository. This will call a 'git fetch' command, but do "
+                "nothing else.",
+        },
+        {
+            "name": "debug_context",
+            "option_strings": ["--debug-context"],
+            "const": True,
+            "action": "store_const",
+            "default": False,
+            "help":
+                "Print the context to use in the mako files, but don't actually create the dist."
+
+        },
+    ]
+    conflicts = [
+        ("github_url", "origin_url"),
+    ]
+
+    def determine_context(self):
+        if self.github_url:
+            self.web_page = self.web_page or self.github_url
+            self.origin_url = "{}.git".format(self.github_url)
+        if self.directory is None:
+            self.directory = os.path.join(os.getcwd(), self.module_name)
+        self.context = {"date": dt.datetime.now()}
+        for arg in self.args:
+            name = arg["name"]
+            value = getattr(self, name)
+            if value is None:
+                value = "<TODO Enter {}>".format(name.replace("_", " ").capitalize())
+            self.context[name] = value
+
+    def dump_context(self):
+        import json
+        json.dump(self.context, sys.stdout, indent=4)
+        print ""
+
+    def do_script(self):
+        self.made_dir = False
+        self.determine_context()
+        if self.debug_context:
+            self.dump_context()
+            return
+        self.mkdir()
+        self.startgit()
+        self.addfiles()
+        self.commit()
+        if self.origin_url:
+            self.connect_to_origin()
+
+    def on_failure(self):
+        if hasattr(self, "made_dir") and self.made_dir:
+            shutil.rmtree(self.directory)
+
+    def mkdir(self):
+        if os.path.exists(self.directory):
+            self.error("Path '{}' already exists".format(self.directory))
+        os.mkdir(self.directory)
+        self.made_dir = True
+
+    def startgit(self):
+        rval = gitinit(directory=self.directory)
+        self.log.info(rval)
+
+    def connect_to_origin(self):
+        self.log.info(setorigin(self.origin_url, fetch=True, directory=self.directory))
+        self.log.info(setupstream("master", "origin/master", directory=self.directory))
+
+    def commit(self):
+        self.log.info(addall(directory=self.directory))
+        message = (
+            "Initial Commit - Created distribution files\n\n"
+            "Created initial distribution files and test package. This message was created\n"
+            "automatically by the 'newpydist' script"
+        )
+        self.log.info(commit(message, directory=self.directory))
+
+    def addfiles(self):
+        try:
+            self.add_files_from_dist()
+        except IOError:
+            self.log.warning("Unable to copy template files from dist location.")
+            self.log.exception("Encountered Exception:")
+            self.log.warning("Attempting to load template files from source")
+            self.add_files_from_source()
+
+    def add_files_from_dist(self):
+        with tarfile.open(self.get_data_archive()) as tf:
+            for member in tf.getmembers():
+                tokens = member.name.split(os.sep)
+                if member.isdir():
+                    os.mkdir(os.path.join(self.directory, *tokens))
+                else:
+                    fp = tf.extractfile(member)
+                    template = Template(fp.read())
+                    self.makofile(tokens, template)
+
+    def add_files_from_source(self):
+        source_dir = self.get_data_source()
+        self.add_files_from_source_recursive(source_dir)
+
+    def add_files_from_source_recursive(self, source_dir, path_tokens=[]):
+        directory = os.path.join(source_dir, *path_tokens)
+        for basename in os.listdir(directory):
+            path = os.path.join(directory, basename)
+            relative_path = path_tokens + [basename]
+            if os.path.isdir(path):
+                os.mkdir(os.path.join(self.directory, *relative_path))
+                self.add_files_from_source_recursive(source_dir, relative_path)
+            else:
+                t = Template(filename=path)
+                self.makofile(relative_path, t)
+
+
+    def makofile(self, template_path_tokens, template):
+        value = template.render(**self.context)
+        destination_filename = ".".join(template_path_tokens[-1].split(".")[:-1])
+        destination_tokens = template_path_tokens[:-1] + [destination_filename]
+        destination = os.path.join(self.directory, *destination_tokens)
+        with open(destination, 'w') as f:
+            f.write(value)
+        self.log.info("Created file '{0}'".format(destination))
+
+
+
+if __name__ == "__main__":
+    NewPyDist.execute()

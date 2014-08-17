@@ -1,3 +1,6 @@
 irc
 sh
 daemon
+validate_email
+pyyaml
+mako

@@ -6,8 +6,6 @@ MANIFEST
 *.so
 
 # Packages
-*.tar
-*.qz
 *.egg
 *.egg-info
 dist

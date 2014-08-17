@@ -1,4 +1,4 @@
-DISTRIBUTION_NAME := pykfs
+DISTRIBUTION_NAME := ${module_name}
 IGNORE_DIRECTORY := ignore
 
 PYTHON_FILES = $(shell find . -name \*.py -not -path "./ignore/*" -not -path "./test/*" -not -name setup.py)
@@ -10,24 +10,12 @@ SAMPLE_ENV_PYTHON := $(SAMPLE_ENV)/bin/python
 TEST_ENV := $(IGNORE_DIRECTORY)/$(DISTRIBUTION_NAME)TestEnv
 TEST_ENV_PIP := $(TEST_ENV)/bin/pip
 TEST_ENV_NOSE := $(TEST_ENV)/bin/nosetests
-TEST_ENV_SITE_PACKAGES := $(TEST_ENV)/lib/python2.7/site-packages
 
-DIST_DIR := dist
+DIST_DIR := dist/
 
-GZIP_COMMAND := tar -pczf
-DATA_DIR := data
-SCRIPTS_DATA_DIR := $(DATA_DIR)/scripts
-NEWPYDIST_FILES :=
-NEWPYDIST_DATA_SOURCE := $(SCRIPTS_DATA_DIR)/newpydist
-NEWPYDIST_DATA_PACKAGE := $(SCRIPTS_DATA_DIR)/newpydist.tar.gz
-NEWPYDIST_DATA_FILES := $(shell find . -path "./data/scripts/newpydist/*")
-NEWPYDIST_DATA_NAMES := $(shell find "data/scripts/newpydist" -mindepth 1 -maxdepth 1 -exec basename {} \;)
-
-DATA_PACKAGES := $(NEWPYDIST_DATA_PACKAGE)
-
-dist: setup.py $(PYTHON_FILES) requirements.txt README MANIFEST.in MAKEFILE $(DATA_PACKAGES)
+dist: setup.py $(PYTHON_FILES) requirements.txt README MANIFEST.in MAKEFILE
 	rm -f -r dist
-	/usr/local/bin/python setup.py sdist 
+	/usr/bin/env python setup.py sdist 
 
 .PHONY: sampleEnv
 sampleEnv: $(SAMPLE_ENV)
@@ -45,7 +33,6 @@ ${TEST_ENV}: requirements.txt MAKEFILE $(IGNORE_DIRECTORY)
 	$(TEST_ENV_PIP) install mock
 	$(TEST_ENV_PIP) install unittest2
 	$(TEST_ENV_PIP) install nose
-	ln -s ../../../../../pykfs $(TEST_ENV_SITE_PACKAGES)/pykfs 
 
 .PHONY: clean
 clean:
@@ -65,9 +52,3 @@ debug: $(TEST_ENV)
 
 $(IGNORE_DIRECTORY):
 	mkdir $(IGNORE_DIRECTORY)
-
-.PHONY: data-archives
-data-archives: $(DATA_PACKAGES)
-
-$(NEWPYDIST_DATA_PACKAGE): $(NEWPYDIST_DATA_FILES) Makefile
-	$(GZIP_COMMAND) $(NEWPYDIST_DATA_PACKAGE) -C $(NEWPYDIST_DATA_SOURCE) $(NEWPYDIST_DATA_NAMES)
