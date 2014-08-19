@@ -3,7 +3,6 @@
 
 from setuptools import setup
 import os.path
-from glob import glob
 import sys
 
 
@@ -17,8 +16,6 @@ version = pykfs.get_version()
 
 
 vstr = ".".join([str(x) for x in sys.version_info[:2]])
-datadir = "lib/python{}/site-packages/pykfs/data-files/scripts".format(vstr)
-data_files = [(datadir, glob("data/scripts/*.tar.gz"))]
 
 
 setup(
@@ -28,7 +25,7 @@ setup(
     author='Kevin Steffler',
     author_email='kevin5steffler@gmail.com',
     url='foobar',
-    data_files=data_files,
+    include_package_data=True,
     packages=['pykfs', 'pykfs.git', 'pykfs.git.hook'],
     scripts=[
         'scripts/grollback', 'scripts/grebase', 'scripts/view_json', 'scripts/gref',

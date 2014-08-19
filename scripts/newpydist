@@ -169,12 +169,10 @@ class NewPyDist(Script):
 
     def addfiles(self):
         try:
-            self.add_files_from_dist()
-        except IOError:
-            self.log.warning("Unable to copy template files from dist location.")
-            self.log.exception("Encountered Exception:")
-            self.log.warning("Attempting to load template files from source")
             self.add_files_from_source()
+            self.log.info("Used source data files")
+        except (OSError, IOError):
+            self.add_files_from_dist()
 
     def add_files_from_dist(self):
         with tarfile.open(self.get_data_archive()) as tf:

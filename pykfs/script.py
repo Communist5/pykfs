@@ -42,6 +42,10 @@ SETTINGS_FILE_ARGS = [
 ]
 
 
+def get_script_data_dir():
+    return os.path.join(pykfs.get_data_dir(), "scripts")
+
+
 class Script(object):
     """ Base for runnable commad line scripts """
 
@@ -61,17 +65,13 @@ class Script(object):
         sys.exit(script.run(tokens, settings=settings))
 
     def get_data_archive(self):
-        data_file_dir = os.path.join(os.path.dirname(pykfs.__file__), "data-files", "scripts")
         data_file_name = "{}.tar.gz".format(self.get_script_name())
-        archive = os.path.join(data_file_dir, data_file_name)
+        archive = os.path.join(get_script_data_dir(), data_file_name)
         return archive
 
     def get_data_source(self):
-        data_file_dir = os.path.join(
-            os.getcwd(), "data", "scripts", self.get_script_name()
-        )
+        data_file_dir = os.path.join(get_script_data_dir(), self.get_script_name())
         return data_file_dir
-
 
     def run(self, tokens, settings=None):
         try:

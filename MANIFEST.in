@@ -1,4 +1,3 @@
 include README
 include requirements.txt
-include data/*.tar.gz
-include data/scripts/*.tar.gz
+include pykfs/data/**/*.tar.gz

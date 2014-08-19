@@ -15,13 +15,12 @@ TEST_ENV_SITE_PACKAGES := $(TEST_ENV)/lib/python2.7/site-packages
 DIST_DIR := dist
 
 GZIP_COMMAND := tar -pczf
-DATA_DIR := data
+DATA_DIR := pykfs/data
 SCRIPTS_DATA_DIR := $(DATA_DIR)/scripts
-NEWPYDIST_FILES :=
 NEWPYDIST_DATA_SOURCE := $(SCRIPTS_DATA_DIR)/newpydist
 NEWPYDIST_DATA_PACKAGE := $(SCRIPTS_DATA_DIR)/newpydist.tar.gz
-NEWPYDIST_DATA_FILES := $(shell find . -path "./data/scripts/newpydist/*")
-NEWPYDIST_DATA_NAMES := $(shell find "data/scripts/newpydist" -mindepth 1 -maxdepth 1 -exec basename {} \;)
+NEWPYDIST_DATA_FILES := $(shell find . -path "$(NEWPYDIST_DATA_SOURCE)/*")
+NEWPYDIST_DATA_NAMES := $(shell find "$(NEWPYDIST_DATA_SOURCE)" -mindepth 1 -maxdepth 1 -exec basename {} \;)
 
 DATA_PACKAGES := $(NEWPYDIST_DATA_PACKAGE)
 
