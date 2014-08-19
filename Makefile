@@ -33,7 +33,7 @@ sampleEnv: $(SAMPLE_ENV)
 $(SAMPLE_ENV): dist $(IGNORE_DIRECTORY)
 	rm -f -r $(SAMPLE_ENV)
 	virtualenv $(SAMPLE_ENV) --no-site-packages
-	$(SAMPLE_ENV_PIP) install $(DIST_DIR)/$(DISTRIBUTION_NAME)*
+	$(SAMPLE_ENV_PIP) install -e .
 
 .PHONY: testEnv
 testEnv: $(TEST_ENV) 
@@ -48,7 +48,7 @@ ${TEST_ENV}: requirements.txt MAKEFILE $(IGNORE_DIRECTORY)
 
 .PHONY: clean
 clean:
-	rm -f -r $(DISTRIBUTION_NAME).egg-info build dist MANIFEST $(SAMPLE_ENV) $(TEST_ENV)
+	rm -f -r $(DISTRIBUTION_NAME).egg-info build dist MANIFEST $(SAMPLE_ENV) $(TEST_ENV) $(DATA_PACKAGES)
 
 .PHONY: pyshell
 pyshell: $(SAMPLE_ENV)
