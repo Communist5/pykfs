@@ -1,5 +1,9 @@
 import os.path
 import yaml
+import logging
+
+
+LOG = logging.getLogger(__name__)
 
 
 def get_default_settings_file_path():
@@ -10,7 +14,7 @@ def get_script_settings(script_name, settings_file=None):
     settings = {}
     if script_name:
         d = get_settings_dict(settings_file)
-        settings = d and d["scripts"][script_name] or {}
+        settings = d and script_name in d["scripts"] and d["scripts"][script_name] or {}
     return settings
 
 
