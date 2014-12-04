@@ -3,6 +3,7 @@ import os
 import argparse
 import pykfs
 from pykfs.settings import get_script_settings
+from pykfs.kfslog import quick_log_config
 import logging
 
 
@@ -28,18 +29,30 @@ def url(value):
     return value
 
 
-SETTINGS_FILE_ARGS = [
-    {
-        "name": "settings_file",
-        "option_strings": ["--settings-file"],
+def get_loglevel_arg(default_level="INFO"):
+    return {
+        "name": "loglevel",
+        "option_strings": ["--log-level"],
         "type": str,
         "action": "store",
         "metavar": "SETTINGS_FILE",
-        "default": None,
+        "default": default_level,
         "help":
-            "The settings file to use while running this script.  Defaults to `~/.pykfsrc`",
-    },
-]
+            "The level to display logs at.  Valid values are DEBUG, INFO, WARNING, ERROR, and "
+            "CRITICAL.",
+    }
+
+
+SETTINGS_FILE_ARG = {
+    "name": "settings_file",
+    "option_strings": ["--settings-file"],
+    "type": str,
+    "action": "store",
+    "metavar": "SETTINGS_FILE",
+    "default": None,
+    "help":
+        "The settings file to use while running this script.  Defaults to `~/.pykfsrc`",
+}
 
 
 def get_script_data_dir():
@@ -49,7 +62,10 @@ def get_script_data_dir():
 class Script(object):
     """ Base for runnable commad line scripts """
 
+    default_log_level = "INFO"
+    use_log_level_arg = True
     use_settings_file = True
+    use_log_for_exceptions = True
     args = []
     conflicts = []
     log = logging
@@ -64,6 +80,9 @@ class Script(object):
         script = cls()
         sys.exit(script.run(tokens, settings=settings))
 
+    def setup_logging(self):
+        quick_log_config(level=self.loglevel)
+
     def get_data_archive(self):
         data_file_name = "{}.tar.gz".format(self.get_script_name())
         archive = os.path.join(get_script_data_dir(), data_file_name)
@@ -75,15 +94,28 @@ class Script(object):
 
     def run(self, tokens, settings=None):
         try:
+            self.log_setup = False
             self.tokens = tokens
             self._parse_args()
             self._load_settings(settings)
             self._determine_arg_values()
+            self.setup_logging()
+            self.log_setup = True
+            self._log_all_args_parsed()
             self.do_script()
         except:
             self.on_failure()
-            raise
+            if self.log_setup and self.use_log_for_exceptions:
+                self.log.exception("Script failed, Exception encountered:")
+            else:
+                raise
         return 0
+
+    def _log_all_args_parsed(self):
+        self.log.info("Arguments parsed successfully.")
+        self.log.debug("Argument values are:")
+        for arg in self.run_args:
+            self.log.debug("  {0} = {1}".format(arg, getattr(self, arg)))
 
     def on_failure(self):
         pass
@@ -93,7 +125,7 @@ class Script(object):
         if not self.settings and self.use_settings_file:
             self.settings = get_script_settings(self.get_script_name())
         for key in self.settings:
-            if key not in [arg["name"] for arg in self.args]:
+            if key not in self.run_args:
                 self._print_warning("Unknown setting '{0}'.\n".format(key))
 
 
@@ -108,16 +140,19 @@ class Script(object):
             sys.exit(exitcode)
 
     def _parse_args(self):
+        self.run_args = []
         self.script_defaults = {}
         self.parser = argparse.ArgumentParser(description=type(self).__doc__.strip())
         for arg in self.args:
             self._add_arg(**arg)
         if self.use_settings_file:
-            for arg in SETTINGS_FILE_ARGS:
-                self._add_arg(**arg)
+            self._add_arg(**SETTINGS_FILE_ARG)
+        if self.use_log_level_arg:
+            self._add_arg(**get_loglevel_arg(self.default_log_level))
         self.options = self.parser.parse_args(self.tokens)
 
     def _add_arg(self, name, option_strings=[], default=None, **kwargs):
+        self.run_args.append(name)
         kwargs["dest"] = name
         kwargs["default"] = None
         self.script_defaults[name] = default
@@ -128,8 +163,7 @@ class Script(object):
     def _determine_arg_values(self):
         for conflict in self.conflicts:
             self._check_conflicting(*conflict)
-        for arg in self.args:
-            argname = arg["name"]
+        for argname in self.run_args:
             value = None
             if hasattr(self.options, argname):
                 value = getattr(self.options, argname)

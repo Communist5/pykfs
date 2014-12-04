@@ -27,6 +27,3 @@ def get_settings_dict(settings_file=None):
     with open(settings_file) as f:
         d = yaml.load(f)
     return d
-
-
-

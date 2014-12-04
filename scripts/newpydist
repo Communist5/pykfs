@@ -11,6 +11,8 @@ import tarfile
 from pykfs.git.lib import init as gitinit
 from pykfs.git.lib import setorigin, setupstream, addall, commit
 from pykfs.script import Script, email, url
+from pykfs.kfslog import quick_log_config
+import logging
 
 
 import mako.runtime
@@ -107,24 +109,35 @@ class NewPyDist(Script):
     conflicts = [
         ("github_url", "origin_url"),
     ]
+    log = logging.getLogger("newpydist")
+
+    def setup_logging(self):
+        quick_log_config(loggers=["newpydist", "pykfs"], level=self.loglevel)
 
     def determine_context(self):
         if self.github_url:
+            self.log.debug("Assigning github urls ...")
             self.web_page = self.web_page or self.github_url
             self.origin_url = "{}.git".format(self.github_url)
+            self.log.debug("  web_page = {}".format(self.web_page))
+            self.log.debug("  origin_url = {}".format(self.origin_url))
         if self.directory is None:
+            self.log.debug("Assigning default directory ...")
             self.directory = os.path.join(os.getcwd(), self.module_name)
+            self.log.debug("  directory = {}".format(self.directory))
         self.context = {"date": dt.datetime.now()}
+        self.log.debug("Assigning TODO values")
         for arg in self.args:
             name = arg["name"]
             value = getattr(self, name)
             if value is None:
                 value = "<TODO Enter {}>".format(name.replace("_", " ").capitalize())
+                self.log.debug("  {0} = {1}".format(name, value))
             self.context[name] = value
 
     def dump_context(self):
         import json
-        json.dump(self.context, sys.stdout, indent=4)
+        json.dump(self.context, sys.stdout, indent=4, default=str)
         print ""
 
     def do_script(self):
@@ -145,33 +158,36 @@ class NewPyDist(Script):
             shutil.rmtree(self.directory)
 
     def mkdir(self):
+        self.log.info("Creating directory '{0}' ...".format(self.directory))
         if os.path.exists(self.directory):
             self.error("Path '{}' already exists".format(self.directory))
         os.mkdir(self.directory)
         self.made_dir = True
 
     def startgit(self):
-        rval = gitinit(directory=self.directory)
-        self.log.info(rval)
+        self.log.info("Initializing git in '{0}' ...".format(self.directory))
+        gitinit(directory=self.directory)
 
     def connect_to_origin(self):
-        self.log.info(setorigin(self.origin_url, fetch=True, directory=self.directory))
-        self.log.info(setupstream("master", "origin/master", directory=self.directory))
+        self.log.info("Connecting to git origin '{0}' ...".format(self.origin_url))
+        setorigin(self.origin_url, fetch=True, directory=self.directory)
 
     def commit(self):
-        self.log.info(addall(directory=self.directory))
+        self.log.info("Commiting generated files ...".format(self.origin_url))
+        addall(directory=self.directory)
         message = (
             "Initial Commit - Created distribution files\n\n"
             "Created initial distribution files and test package. This message was created\n"
             "automatically by the 'newpydist' script"
         )
-        self.log.info(commit(message, directory=self.directory))
+        commit(message, directory=self.directory)
 
     def addfiles(self):
+        self.log.info("Adding generated files ...".format(self.origin_url))
         try:
             self.add_files_from_source()
-            self.log.info("Used source data files")
         except (OSError, IOError):
+            self.log.info("Using dist data files ..")
             self.add_files_from_dist()
 
     def add_files_from_dist(self):
@@ -209,8 +225,7 @@ class NewPyDist(Script):
         destination = os.path.join(self.directory, *destination_tokens)
         with open(destination, 'w') as f:
             f.write(value)
-        self.log.info("Created file '{0}'".format(destination))
-
+        self.log.info("  Created file '{0}'".format(destination))
 
 
 if __name__ == "__main__":

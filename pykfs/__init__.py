@@ -1,7 +1,11 @@
 import os.path
+import logging
 
 
-VERSION = (0, 2, 1, 1)
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
+VERSION = (0, 2, 2, 1)
 
 
 def get_version():
