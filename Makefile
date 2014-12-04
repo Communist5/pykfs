@@ -37,7 +37,7 @@ $(SAMPLE_ENV): dist $(IGNORE_DIRECTORY)
 
 .PHONY: testEnv
 testEnv: $(TEST_ENV) 
-${TEST_ENV}: requirements.txt MAKEFILE $(IGNORE_DIRECTORY)
+$(TEST_ENV): requirements.txt MAKEFILE $(IGNORE_DIRECTORY)
 	rm -f -r $(TEST_ENV)
 	virtualenv $(TEST_ENV) --no-site-packages
 	$(TEST_ENV_PIP) install -r requirements.txt

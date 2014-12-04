@@ -9,7 +9,7 @@ import datetime as dt
 from mako.template import Template
 import tarfile
 from pykfs.git.lib import init as gitinit
-from pykfs.git.lib import setorigin, setupstream, addall, commit
+from pykfs.git.lib import setorigin, addall, commit
 from pykfs.script import Script, email, url
 from pykfs.kfslog import quick_log_config
 import logging

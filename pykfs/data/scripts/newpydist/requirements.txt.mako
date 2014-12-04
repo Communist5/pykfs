@@ -1,3 +1,0 @@
-irc
-sh
-daemon
