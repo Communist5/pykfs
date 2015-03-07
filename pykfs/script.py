@@ -35,7 +35,7 @@ def get_loglevel_arg(default_level="INFO"):
         "option_strings": ["--log-level"],
         "type": str,
         "action": "store",
-        "metavar": "SETTINGS_FILE",
+        "metavar": "LOGLEVEL",
         "default": default_level,
         "help":
             "The level to display logs at.  Valid values are DEBUG, INFO, WARNING, ERROR, and "
